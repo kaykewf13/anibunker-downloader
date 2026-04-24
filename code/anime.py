@@ -2,6 +2,8 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import re
+import argparse
+import sys
 
 # Função para obter o número total de episódios e verificar as versões disponíveis
 def get_total_episodes_and_versions(url):
@@ -107,14 +109,38 @@ def download_episodes(links, version):
         # Baixar o vídeo
         download_video(video_url, path)
 
-# Solicitar o URL da página do anime ao usuário
-anime_url = input("Insira o URL da página do anime: ").strip()
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Baixa todos os episódios de um anime do Anibunker."
+    )
+    parser.add_argument(
+        "--url",
+        help="URL da página do anime (ex: https://www.anibunker.com/anime/agent-aika)",
+    )
+    parser.add_argument(
+        "--versao",
+        choices=["legendada", "dublada", "ambas"],
+        help="Versão para download sem prompt interativo.",
+    )
+    return parser.parse_args()
 
-# Obter o nome do anime e o número total de episódios e versões disponíveis
-anime_name, total_episodes_legendado, total_episodes_dublado = get_total_episodes_and_versions(anime_url)
+
+args = parse_args()
+
+# Solicitar o URL da página do anime ao usuário (ou usar --url)
+anime_url = args.url.strip() if args.url else input("Insira o URL da página do anime: ").strip()
+
+try:
+    # Obter o nome do anime e o número total de episódios e versões disponíveis
+    anime_name, total_episodes_legendado, total_episodes_dublado = get_total_episodes_and_versions(anime_url)
+except requests.RequestException as exc:
+    print(f"Erro de conexão ao acessar {anime_url}: {exc}")
+    sys.exit(1)
 
 # Verificar as versões disponíveis e solicitar ao usuário a escolha
-if total_episodes_legendado > 0 and total_episodes_dublado > 0:
+if args.versao:
+    choice = args.versao
+elif total_episodes_legendado > 0 and total_episodes_dublado > 0:
     choice = input("Deseja baixar a versão legendada, dublada ou ambas? (legendada/dublada/ambas): ").strip().lower()
 elif total_episodes_legendado > 0:
     choice = "legendada"
